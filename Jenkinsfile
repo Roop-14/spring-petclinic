@@ -1,36 +1,45 @@
 pipeline {
+
     agent { label 'JDK17' }
-    options { 
+
+    parameters {
+        string(name: 'MAVEN_GOAL', defaultValue: 'clean package', description: 'Enter Maven goal to run')
+    }
+
+    options {
         timeout(time: 1, unit: 'HOURS')
         retry(2)
-      }
+    }
+
     stages {
-       stage('Git clone') {
-          steps {
-              git url: 'https://github.com/mailrajeshsre/spring-petclinic.git', branch: 'main'
-         }
-      }
-       stage('Build the code and SonarQube Analysis') {
-         steps {
-             withSonarQubeEnv('SONAR_LATEST') {
-               sh  '/opt/apache-maven-3.9.9/bin/mvn clean package sonar:sonar'
+
+        stage('Git clone') {
+            steps {
+                git url: 'https://github.com/Roop-14/spring-petclinic.git', branch: 'main'
             }
         }
-     }
-      stage('Reporting and Arhchiving') {
-        steps {
-           junit testResults : 'target/surefire-reports/*.xml'
+
+        stage('Build the code') {
+            steps {
+                sh "mvn ${params.MAVEN_GOAL}"
+            }
         }
-      }
- }
-   post {
-    success {
-      //send the success email
-      echo "Success"
-   }
-    unsuccessful {
-       //send the unsuccess email
-      echo "Failure"
-   }
- }
+
+        stage('Reporting and Archiving') {
+            steps {
+                junit testResults: 'target/surefire-reports/*.xml'
+                archiveArtifacts artifacts: '**/target/*.jar', allowEmptyArchive: true
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Build SUCCESS"
+        }
+        unsuccessful {
+            echo "Build FAILED"
+        }
+    }
 }
+
